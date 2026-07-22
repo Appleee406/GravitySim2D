@@ -44,7 +44,7 @@ void updatePhysics(std::vector<Body>& bodies, float dt) {
     if(a_old.size() != bodies.size()) a_old.resize(bodies.size());
 
     for(size_t i = 0; i < bodies.size(); ++i) {
-        bodies[i].m_pos += bodies[i].m_vel * dt + 0.5f * bodies[i].m_acceleration * std::powf(dt, 2);
+        bodies[i].m_pos += bodies[i].m_vel * dt + 0.5f * bodies[i].m_acceleration * powf(dt, 2);
         a_old[i] = bodies[i].m_acceleration;
         bodies[i].m_acceleration = sf::Vector2f(0.f, 0.f);
     }
@@ -56,7 +56,7 @@ void updatePhysics(std::vector<Body>& bodies, float dt) {
             sf::Vector2f delta = bodies[j].m_pos - bodies[i].m_pos; // (dx, dy);
 
             float dist_sqr = delta.x * delta.x + delta.y * delta.y;
-            float dist = std::sqrtf(dist_sqr);
+            float dist = sqrtf(dist_sqr);
 
             if (dist < MIN_DIST) {
                 dist = MIN_DIST;
