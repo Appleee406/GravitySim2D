@@ -39,6 +39,7 @@ jobs:
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-git
             mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-ninja
           update: true
 
       - name: Install vcpkg (Linux)
@@ -57,7 +58,7 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git
           cd vcpkg
           ./bootstrap-vcpkg.sh
-          echo "$PWD" >> $GITHUB_PATH
+          echo "export PATH=\$PWD:\$PATH" >> ~/.bashrc
 
       - name: Cache vcpkg packages
         uses: actions/cache@v3
@@ -78,13 +79,16 @@ jobs:
       - name: Install SFML (Windows)
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: vcpkg install sfml:${{ matrix.triplet }}
+        run: |
+          source ~/.bashrc
+          vcpkg install sfml:${{ matrix.triplet }}
 
       - name: Configure CMake (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
           cmake -B build \
+                -G Ninja \
                 -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
                 -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
                 -DSFML_STATIC_LIBRARIES=${{ matrix.static }} \
@@ -95,8 +99,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
+          source ~/.bashrc
           cmake -B build \
-                -G "MinGW Makefiles" \
+                -G Ninja \
                 -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
                 -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
                 -DSFML_STATIC_LIBRARIES=${{ matrix.static }} \
@@ -111,7 +116,9 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: cmake --build build --config Release --parallel
+        run: |
+          source ~/.bashrc
+          cmake --build build --config Release --parallel
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
