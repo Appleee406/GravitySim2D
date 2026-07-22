@@ -39,7 +39,7 @@ jobs:
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-git
             mingw-w64-ucrt-x86_64-pkg-config
-            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-make
           update: true
 
       - name: Install vcpkg (Linux)
@@ -95,9 +95,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
+          VCPKG_TOOLCHAIN=$(cygpath -m "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake")
           cmake -B build \
-                -G Ninja \
-                -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+                -G "MinGW Makefiles" \
+                -DCMAKE_TOOLCHAIN_FILE="$VCPKG_TOOLCHAIN" \
                 -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
                 -DSFML_STATIC_LIBRARIES=${{ matrix.static }} \
                 -DCMAKE_CXX_COMPILE_DEFINITIONS=${{ matrix.static && 'SFML_STATIC' || '' }} \
