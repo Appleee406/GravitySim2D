@@ -12,7 +12,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            triplet: x64-windows-static
+            triplet: x64-mingw-static
             static: true
           - os: ubuntu-latest
             triplet: x64-linux
@@ -29,23 +29,36 @@ jobs:
           sudo apt update
           sudo apt install -y g++ cmake ninja-build libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev
 
-      - name: Install vcpkg
+      - name: Setup MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            gcc
+            g++
+            make
+            cmake
+            git
+            pkg-config
+
+      - name: Install vcpkg (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           cd vcpkg
           ./bootstrap-vcpkg.sh
           echo "$PWD" >> $GITHUB_PATH
-        if: runner.os != 'Windows'
 
       - name: Install vcpkg (Windows)
-        shell: powershell
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           cd vcpkg
-          .\bootstrap-vcpkg.bat
-          echo "$PWD" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        if: runner.os == 'Windows'
+          ./bootstrap-vcpkg.sh
+          echo "$PWD" >> $GITHUB_PATH
 
       - name: Cache vcpkg packages
         uses: actions/cache@v3
@@ -58,12 +71,18 @@ jobs:
             ${{ runner.os }}-${{ matrix.triplet }}-
             ${{ runner.os }}-
 
-      - name: Install SFML
+      - name: Install SFML (Linux)
+        if: runner.os == 'Linux'
         shell: bash
-        run: |
-          vcpkg install sfml:${{ matrix.triplet }}
+        run: vcpkg install sfml:${{ matrix.triplet }}
 
-      - name: Configure CMake
+      - name: Install SFML (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: vcpkg install sfml:${{ matrix.triplet }}
+
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cmake -B build \
@@ -73,8 +92,26 @@ jobs:
                 -DCMAKE_CXX_COMPILE_DEFINITIONS=${{ matrix.static && 'SFML_STATIC' || '' }} \
                 -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          cmake -B build \
+                -G "MinGW Makefiles" \
+                -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+                -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+                -DSFML_STATIC_LIBRARIES=${{ matrix.static }} \
+                -DCMAKE_CXX_COMPILE_DEFINITIONS=${{ matrix.static && 'SFML_STATIC' || '' }} \
+                -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
         shell: bash
+        run: cmake --build build --config Release --parallel
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
         run: cmake --build build --config Release --parallel
 
       - name: Upload build artifacts
