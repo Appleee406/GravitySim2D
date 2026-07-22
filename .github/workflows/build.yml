@@ -1,65 +1,65 @@
-name: Release Build Matrix
+name: Build (static Release)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    
     strategy:
-      fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            artifact_name: GravitySim2D-Windows-x64
-            binary_src: build/Release/GravitySim2D.exe
-            binary_name: GravitySim2D.exe
+            triplet: x64-windows-static
           - os: ubuntu-latest
-            artifact_name: GravitySim2D-Linux-x64
-            binary_src: build/GravitySim2D
-            binary_name: GravitySim2D
+            triplet: x64-linux-static
+          - os: macos-latest
+            triplet: x64-osx-static
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install System Dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cmake g++ libx11-dev libxrandr-dev libudev-dev libgl1-mesa-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev libfreetype6-dev
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          vcpkgGitCommitId: '7d8c3e7f0d6f8e9c8a2b4c5d6e7f8a9b0c1d2e3f'
 
-    - name: Download and Build SFML 3 Statically
-      run: |
-        curl -L -o sfml.tar.gz https://github.com
-        tar -xzf sfml.tar.gz
-        cd SFML-3.0.0
-        cmake -B build_sfml -DCMAKE_BUILD_TYPE=Release -DSFML_BUILD_STATIC_LIBS=ON -DCMAKE_INSTALL_PREFIX=../sfml_install
-        cmake --build build_sfml --target install --config Release
-        cd ..
+      - name: Cache vcpkg packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/vcpkg/packages
+            ${{ github.workspace }}/vcpkg/downloads
+          key: ${{ runner.os }}-${{ matrix.triplet }}-${{ hashFiles('**/vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.triplet }}-
+            ${{ runner.os }}-
 
-    - name: Configure CMake
-      run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release -DSFML_DIR=${{ github.workspace }}/sfml_install/lib/cmake/SFML
+      - name: Install SFML (static)
+        run: |
+          ${{ github.workspace }}/vcpkg/vcpkg install sfml:${{ matrix.triplet }}
+        shell: bash
 
-    - name: Build Project
-      run: cmake --build build --config Release
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+                -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+                -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+                -DSFML_STATIC_LIBRARIES=ON \
+                -DCMAKE_CXX_COMPILE_DEFINITIONS=SFML_STATIC \
+                -DCMAKE_BUILD_TYPE=Release
+        shell: bash
 
-    - name: Prepare Artifact Directory
-      shell: bash
-      run: |
-        mkdir -p GravitySim2D/build
-        cp ${{ matrix.binary_src }} GravitySim2D/build/${{ matrix.binary_name }}
-        cp -r assets GravitySim2D/assets
+      - name: Build
+        run: cmake --build build --config Release --parallel
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: GravitySim2D/
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GravitySim2D-${{ matrix.os }}
+          path: build/
