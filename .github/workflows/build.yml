@@ -60,7 +60,7 @@ jobs:
 
     # Upload the GravitySim2D
     - name: Upload Artifact
-      uses: actions/artifact@v4
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
         path: GravitySim2D/
