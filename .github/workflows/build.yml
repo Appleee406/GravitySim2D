@@ -23,6 +23,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y g++ cmake ninja-build libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl-dev libglu1-mesa-dev libasound2-dev libpulse-dev libudev-dev
+
       - name: Install vcpkg
         shell: bash
         run: |
