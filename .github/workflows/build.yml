@@ -49,7 +49,6 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git
           cd vcpkg
           ./bootstrap-vcpkg.sh
-          echo "$PWD" >> $GITHUB_PATH
 
       - name: Install vcpkg (Windows)
         if: runner.os == 'Windows'
@@ -58,7 +57,6 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git
           cd vcpkg
           ./bootstrap-vcpkg.sh
-          echo "export PATH=\$PWD:\$PATH" >> ~/.bashrc
 
       - name: Cache vcpkg packages
         uses: actions/cache@v3
@@ -74,14 +72,12 @@ jobs:
       - name: Install SFML (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        run: vcpkg install sfml:${{ matrix.triplet }}
+        run: ./vcpkg/vcpkg install sfml:${{ matrix.triplet }}
 
       - name: Install SFML (Windows)
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: |
-          source ~/.bashrc
-          vcpkg install sfml:${{ matrix.triplet }}
+        run: ./vcpkg/vcpkg install sfml:${{ matrix.triplet }}
 
       - name: Configure CMake (Linux)
         if: runner.os == 'Linux'
@@ -99,7 +95,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
-          source ~/.bashrc
           cmake -B build \
                 -G Ninja \
                 -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
@@ -116,9 +111,7 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: |
-          source ~/.bashrc
-          cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --parallel
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
