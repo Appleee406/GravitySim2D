@@ -1,4 +1,4 @@
-name: Build (static Release)
+name: Build
 
 on:
   push:
@@ -13,8 +13,10 @@ jobs:
         include:
           - os: windows-latest
             triplet: x64-windows-static
+            static: true
           - os: ubuntu-latest
-            triplet: x64-linux-static
+            triplet: x64-linux
+            static: false
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -50,7 +52,7 @@ jobs:
             ${{ runner.os }}-${{ matrix.triplet }}-
             ${{ runner.os }}-
 
-      - name: Install SFML (static)
+      - name: Install SFML
         shell: bash
         run: |
           vcpkg install sfml:${{ matrix.triplet }}
@@ -61,8 +63,8 @@ jobs:
           cmake -B build \
                 -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
                 -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
-                -DSFML_STATIC_LIBRARIES=ON \
-                -DCMAKE_CXX_COMPILE_DEFINITIONS=SFML_STATIC \
+                -DSFML_STATIC_LIBRARIES=${{ matrix.static }} \
+                -DCMAKE_CXX_COMPILE_DEFINITIONS=${{ matrix.static && 'SFML_STATIC' || '' }} \
                 -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
