@@ -1,0 +1,66 @@
+name: Release Build Matrix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: GravitySim2D-Windows-x64
+            binary_src: build/Release/GravitySim2D.exe
+            binary_name: GravitySim2D.exe
+          - os: ubuntu-latest
+            artifact_name: GravitySim2D-Linux-x64
+            binary_src: build/GravitySim2D
+            binary_name: GravitySim2D
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Install system graphics headers required to compile SFML
+    - name: Install System Dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++ libx11-dev libxrandr-dev libudev-dev libgl1-mesa-dev libflac-dev libogg-dev libvorbis-dev libopenal-dev libfreetype6-dev
+
+    # Configure CMake with Release flags (FetchContent will download SFML automatically)
+    - name: Configure CMake
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    # Build the application and static SFML from source
+    - name: Build Project
+      run: cmake --build build --config Release
+
+    # Structure the final output directory exactly as requested
+    - name: Prepare Artifact Directory
+      shell: bash
+      run: |
+        # Create GravitySim2D directory structure
+        mkdir -p GravitySim2D/build
+        
+        # Copy binary directly into GravitySim2D/build/ root
+        cp ${{ matrix.binary_src }} GravitySim2D/build/${{ matrix.binary_name }}
+        
+        # Copy assets
+        cp -r assets GravitySim2D/assets
+
+    # Upload the GravitySim2D
+    - name: Upload Artifact
+      uses: actions/artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: GravitySim2D/
