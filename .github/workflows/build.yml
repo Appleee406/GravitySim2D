@@ -27,7 +27,6 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          vcpkgGitCommitId: '7d8c3e7f0d6f8e9c8a2b4c5d6e7f8a9b0c1d2e3f'
 
       - name: Cache vcpkg packages
         uses: actions/cache@v3
@@ -62,4 +61,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GravitySim2D-${{ matrix.os }}
-          path: build/
+          path: build/s
